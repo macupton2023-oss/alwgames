@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALW Matching Game</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Calibri, Georgia, sans-serif; background: #1A0A0F; color: #FAF5EE; min-height: 100vh; padding: 1.5rem; }
+h1 { text-align: center; font-size: 26px; color: #F0D080; letter-spacing: 1px; margin-bottom: 4px; font-family: Georgia, serif; }
+.sub { text-align: center; font-size: 13px; color: #7A6A5A; margin-bottom: 1.5rem; }
+
+.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+.rbadge { display: inline-block; background: #2C1A20; border: 1px solid #4A2030; border-radius: 8px; font-size: 13px; color: #C9963B; padding: 4px 14px; font-family: Georgia, serif; }
+.prog { font-size: 13px; color: #7A6A5A; }
+
+.scorerow { display: flex; gap: 20px; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat .val { font-size: 28px; font-weight: bold; font-family: Georgia, serif; }
+.stat .val.green { color: #5DCAA5; }
+.stat .val.red { color: #E24B4A; }
+.stat .val.gold { color: #F0D080; }
+.stat .lbl { font-size: 11px; color: #7A6A5A; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+.mfb { text-align: center; font-size: 15px; min-height: 24px; margin-bottom: 10px; font-weight: bold; color: #7A6A5A; }
+.mfb.ok { color: #5DCAA5; }
+.mfb.bad { color: #E24B4A; }
+
+.mlayout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1rem; }
+.mclabel { font-size: 11px; font-weight: bold; color: #C9963B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; text-align: center; }
+.mi { background: #2C1A20; border: 1px solid #4A2030; border-radius: 8px; padding: 11px 12px; font-size: 13px; color: #FAF5EE; cursor: pointer; margin-bottom: 8px; line-height: 1.4; transition: border-color 0.15s, background 0.15s; user-select: none; }
+.mi:hover:not(.ok):not(.locked) { border-color: #C9963B; }
+.mi.sel { border: 2px solid #378ADD; background: #0C2A40; color: #B5D4F4; }
+.mi.ok { border: 2px solid #5DCAA5; background: #0A2A20; color: #9FE1CB; cursor: default; }
+.mi.bad { border: 2px solid #E24B4A; background: #2A0A0A; color: #F09595; }
+.mi.locked { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+.btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.btn { padding: 9px 20px; border-radius: 8px; border: 1px solid #4A2030; background: transparent; color: #FAF5EE; font-size: 13px; cursor: pointer; font-family: Calibri, sans-serif; }
+.btn:hover { background: #2C1A20; }
+.btn.gold { background: #6B1A2A; border-color: #C9963B; color: #F0D080; font-weight: bold; }
+.btn.gold:hover { background: #8B2A3A; }
+
+/* overlay */
+.overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:20; padding:1rem; }
+.obox { background: #1A0A0F; border: 2px solid #C9963B; border-radius: 14px; padding: 2rem; max-width: 400px; width: 100%; text-align: center; }
+.obox h2 { font-size: 22px; color: #F0D080; font-family: Georgia, serif; margin-bottom: 0.5rem; }
+.obox .final-score { font-size: 48px; font-weight: bold; color: #F0D080; font-family: Georgia, serif; margin: 1rem 0 0.25rem; }
+.obox .final-label { font-size: 12px; color: #7A6A5A; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1.25rem; }
+.obox .breakdown { font-size: 14px; color: #7A6A5A; margin-bottom: 1.5rem; line-height: 1.8; }
+.obox .breakdown span { color: #FAF5EE; }
+.obtns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<h1>Andrew Lloyd Webber</h1>
+<p class="sub">Match each term to its description. Correct answers score points, wrong answers lose points.</p>
+
+<div class="top-bar">
+  <span class="rbadge" id="rbadge">Round 1 of 3</span>
+  <span class="prog" id="prog"></span>
+</div>
+
+<div class="scorerow">
+  <div class="stat"><div class="val gold" id="score">0</div><div class="lbl">Score</div></div>
+  <div class="stat"><div class="val green" id="correct-count">0</div><div class="lbl">Correct</div></div>
+  <div class="stat"><div class="val red" id="wrong-count">0</div><div class="lbl">Wrong</div></div>
+</div>
+
+<div class="mfb" id="mfb"></div>
+
+<div class="mlayout">
+  <div><div class="mclabel">Term / Show</div><div id="lcol"></div></div>
+  <div><div class="mclabel">Description</div><div id="rcol"></div></div>
+</div>
+
+<div class="btns">
+  <button class="btn" onclick="revealAll()">Reveal all</button>
+  <button class="btn" onclick="endRound()">Next round &rarr;</button>
+  <button class="btn" onclick="resetGame()">Restart</button>
+</div>
+
+<div class="overlay" id="overlay" style="display:none;">
+  <div class="obox">
+    <h2 id="otitle">Round Complete!</h2>
+    <div class="final-score" id="ofinal"></div>
+    <div class="final-label">points</div>
+    <div class="breakdown" id="obreakdown"></div>
+    <div class="obtns">
+      <button class="btn gold" id="onext" onclick="overlayNext()">Next round &rarr;</button>
+      <button class="btn" onclick="resetGame()">Play again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var ROUNDS=[
+  {title:"Round 1: Career Milestones",pairs:[
+    {term:"1968",def:"Year Lloyd Webber and Tim Rice first collaborated, on Joseph and the Amazing Technicolor Dreamcoat"},
+    {term:"1978",def:"Year Evita opened in the West End, after starting as a concept album"},
+    {term:"1981",def:"Year Cats opened in London, based on T.S. Eliot's poetry"},
+    {term:"1986",def:"Year The Phantom of the Opera premiered at Her Majesty's Theatre, London"},
+    {term:"2023",def:"Year Phantom of the Opera closed on Broadway after a record 35-year run"},
+  ]},
+  {title:"Round 2: Show Descriptions",pairs:[
+    {term:"Cats",def:"A sung-through show built entirely from T.S. Eliot's poems, featuring a tribe of felines competing for reincarnation"},
+    {term:"Evita",def:"A sung-through political musical following Eva Peron's rise from poverty to First Lady of Argentina"},
+    {term:"Joseph and the Amazing Technicolor Dreamcoat",def:"A family-friendly retelling of the biblical story of Joseph, featuring many different musical styles"},
+    {term:"Starlight Express",def:"A rock musical performed entirely on roller skates, depicting a race between anthropomorphic trains"},
+    {term:"The Phantom of the Opera",def:"A gothic romantic musical set in the Paris Opera House, following a disfigured musical genius"},
+  ]},
+  {title:"Round 3: Key Concepts",pairs:[
+    {term:"Pop opera",def:"Lloyd Webber's genre blending classical operatic structures with contemporary rock and pop sounds"},
+    {term:"Reprise",def:"A technique Lloyd Webber uses to return to an earlier melody in a transformed emotional context"},
+    {term:"Concept album",def:"A full recording of a show released before it is staged, used by Lloyd Webber to build audience and funding"},
+    {term:"The Really Useful Group",def:"Lloyd Webber's own company, founded so he could control production and creative decisions independently"},
+    {term:"Orchestration",def:"Lloyd Webber is praised for this element, using rich, lush arrangements that give his shows a cinematic quality"},
+  ]},
+];
+
+var PTS_CORRECT=20, PTS_WRONG=10;
+var mRound=0, score=0, totalCorrect=0, totalWrong=0;
+var selL=null, selR=null, matched=[], wrong=null, rItems=[], locked=false;
+
+function shuffle(a){var b=a.slice();for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=b[i];b[i]=b[j];b[j]=t;}return b;}
+function setFb(msg,cls){var el=document.getElementById('mfb');el.textContent=msg;el.className='mfb'+(cls?' '+cls:'');}
+function updateStats(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('correct-count').textContent=totalCorrect;
+  document.getElementById('wrong-count').textContent=totalWrong;
+}
+
+function initRound(){
+  var r=ROUNDS[mRound];
+  document.getElementById('rbadge').textContent=r.title+' | Round '+(mRound+1)+' of '+ROUNDS.length;
+  rItems=shuffle(r.pairs.map(function(p){return p.def;}));
+  selL=null; selR=null; matched=[]; wrong=null; locked=false;
+  setFb('',''); updateProg(); renderCols();
+}
+
+function updateProg(){
+  document.getElementById('prog').textContent=matched.length+' / '+ROUNDS[mRound].pairs.length+' matched';
+}
+
+function renderCols(){
+  var lc=document.getElementById('lcol'), rc=document.getElementById('rcol');
+  lc.innerHTML=''; rc.innerHTML='';
+  var r=ROUNDS[mRound];
+  r.pairs.forEach(function(p){
+    var d=document.createElement('div');
+    var isM=matched.find(function(m){return m.term===p.term;});
+    d.className='mi'+(isM?' ok':'')+(selL===p.term?' sel':'')+(wrong&&wrong.l===p.term?' bad':'')+(locked&&!isM?' locked':'');
+    d.textContent=p.term;
+    if(!isM&&!locked){(function(t){d.onclick=function(){selL=t;wrong=null;renderCols();if(selL&&selR)setTimeout(checkM,80);};})(p.term);}
+    lc.appendChild(d);
+  });
+  rItems.forEach(function(def){
+    var d=document.createElement('div');
+    var isM=matched.find(function(m){return m.def===def;});
+    d.className='mi'+(isM?' ok':'')+(selR===def?' sel':'')+(wrong&&wrong.r===def?' bad':'')+(locked&&!isM?' locked':'');
+    d.textContent=def;
+    if(!isM&&!locked){(function(df){d.onclick=function(){selR=df;wrong=null;renderCols();if(selL&&selR)setTimeout(checkM,80);};})(def);}
+    rc.appendChild(d);
+  });
+}
+
+function checkM(){
+  if(!selL||!selR) return;
+  var r=ROUNDS[mRound];
+  var cp=r.pairs.find(function(p){return p.term===selL;});
+  if(cp&&cp.def===selR){
+    matched.push({term:selL,def:selR});
+    score+=PTS_CORRECT; totalCorrect++;
+    setFb('Correct! +'+PTS_CORRECT+' points.','ok');
+    selL=null; selR=null; wrong=null;
+    updateStats(); updateProg(); renderCols();
+    if(matched.length===r.pairs.length){ setTimeout(showOverlay,600); }
+  } else {
+    wrong={l:selL,r:selR};
+    score-=PTS_WRONG; totalWrong++;
+    setFb('Wrong! -'+PTS_WRONG+' points.','bad');
+    updateStats(); renderCols();
+    setTimeout(function(){wrong=null;selL=null;selR=null;renderCols();setFb('','');},1000);
+  }
+}
+
+function revealAll(){
+  matched=ROUNDS[mRound].pairs.map(function(p){return{term:p.term,def:p.def};});
+  selL=null; selR=null; wrong=null; locked=true;
+  setFb('All answers revealed.','ok'); updateProg(); renderCols();
+}
+
+function endRound(){ showOverlay(); }
+
+function showOverlay(){
+  var isLast=(mRound===ROUNDS.length-1);
+  document.getElementById('otitle').textContent=isLast?'Game Over!':'Round '+(mRound+1)+' Complete!';
+  document.getElementById('ofinal').textContent=score;
+  document.getElementById('obreakdown').innerHTML=
+    '<span>'+totalCorrect+'</span> correct (+'+( totalCorrect*PTS_CORRECT)+' pts)&nbsp;&nbsp;|&nbsp;&nbsp;'+
+    '<span>'+totalWrong+'</span> wrong (-'+(totalWrong*PTS_WRONG)+' pts)';
+  var onext=document.getElementById('onext');
+  onext.style.display=isLast?'none':'inline-block';
+  if(isLast) onext.textContent='Next round';
+  document.getElementById('overlay').style.display='flex';
+}
+
+function overlayNext(){
+  document.getElementById('overlay').style.display='none';
+  mRound++;
+  initRound();
+}
+
+function resetGame(){
+  document.getElementById('overlay').style.display='none';
+  mRound=0; score=0; totalCorrect=0; totalWrong=0;
+  updateStats(); initRound();
+}
+
+initRound();
+updateStats();
+</script>
+</body>
+</html>

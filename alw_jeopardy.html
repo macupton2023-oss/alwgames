@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALW Jeopardy</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Georgia, serif; background: #1A0A0F; color: #FAF5EE; min-height: 100vh; padding: 1.5rem; }
+h1 { text-align: center; font-size: 28px; color: #F0D080; letter-spacing: 1px; margin-bottom: 4px; }
+.sub { text-align: center; font-size: 14px; color: #7A6A5A; margin-bottom: 1.5rem; font-family: Calibri, sans-serif; }
+.sb { display: flex; gap: 10px; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.tc { background: #2C1A20; border: 1px solid #4A2030; border-radius: 10px; padding: 10px 18px; min-width: 120px; text-align: center; cursor: pointer; }
+.tc.act { border: 2px solid #5DCAA5; }
+.tc input { font-size: 12px; border: none; background: transparent; color: #C9963B; text-align: center; width: 100%; outline: none; cursor: pointer; font-family: Calibri, sans-serif; }
+.tc input:focus { border-bottom: 1px solid #C9963B; }
+.tc .sc { font-size: 24px; font-weight: bold; color: #FAF5EE; }
+.board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1rem; }
+.ch { background: #6B1A2A; color: #F0D080; border-radius: 8px; padding: 10px 6px; text-align: center; font-size: 13px; font-weight: bold; min-height: 58px; display: flex; align-items: center; justify-content: center; line-height: 1.3; font-family: Calibri, sans-serif; }
+.cell { background: #185FA5; color: #B5D4F4; border-radius: 8px; padding: 12px 4px; text-align: center; font-size: 22px; font-weight: bold; cursor: pointer; min-height: 70px; display: flex; align-items: center; justify-content: center; border: none; width: 100%; transition: background 0.15s; font-family: Georgia, serif; }
+.cell:hover:not(.used) { background: #378ADD; }
+.cell.used { background: #2C1A20; color: #4A3A30; cursor: default; font-size: 20px; }
+.jbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+.jbtns button { padding: 8px 18px; border-radius: 8px; border: 1px solid #4A2030; background: transparent; color: #FAF5EE; font-size: 13px; cursor: pointer; font-family: Calibri, sans-serif; }
+.jbtns button:hover { background: #2C1A20; }
+.msg { font-size: 13px; color: #7A6A5A; text-align: center; margin: 8px 0; min-height: 20px; font-family: Calibri, sans-serif; }
+.ov { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:10; padding:1rem; }
+.mo { background: #FAF5EE; color: #2C2C2C; border-radius: 12px; padding: 2rem; max-width: 560px; width: 100%; }
+.mo .pb { display:inline-block; background:#E6F1FB; color:#185FA5; font-size:12px; font-weight:bold; padding:4px 12px; border-radius:8px; margin-bottom:12px; font-family: Calibri, sans-serif; }
+.mo .cl { font-size:12px; color:#7A6A5A; margin-bottom:6px; font-family: Calibri, sans-serif; text-transform: uppercase; letter-spacing: 1px; }
+.mo .qq { font-size:20px; font-weight:bold; color:#1A0A0F; margin-bottom:1.25rem; line-height:1.5; font-family: Georgia, serif; }
+.ab { background: #F0E8DC; border-radius: 8px; padding: 14px 16px; margin-bottom: 1rem; display: none; }
+.ab .al { font-size:11px; color:#7A6A5A; margin-bottom:4px; letter-spacing:1px; font-family: Calibri, sans-serif; text-transform: uppercase; }
+.ab .at { font-size:16px; color:#1A0A0F; font-weight:bold; font-family: Georgia, serif; }
+.mbs { display:flex; gap:8px; flex-wrap:wrap; }
+.mbs button { flex:1; min-width:90px; padding:10px 8px; border-radius:8px; border:1px solid #ccc; background:transparent; color:#2C2C2C; font-size:13px; cursor:pointer; font-family: Calibri, sans-serif; }
+.mbs button:hover { opacity: 0.85; }
+.mbs .rb { background:#E6F1FB; color:#185FA5; border-color:#B5D4F4; }
+.mbs .cb { background:#E1F5EE; color:#0F6E56; border-color:#5DCAA5; }
+.mbs .wb { background:#FCEBEB; color:#A32D2D; border-color:#F09595; }
+</style>
+</head>
+<body>
+<h1>Andrew Lloyd Webber</h1>
+<p class="sub">Jeopardy. Teacher-led class game. Click a team to make it active, then award points.</p>
+<div class="sb" id="sb"></div>
+<div class="board" id="board"></div>
+<div class="msg" id="msg"></div>
+<div class="jbtns">
+  <button onclick="resetJ()">Reset board</button>
+  <button onclick="addTeam()">+ Add team</button>
+</div>
+<div class="ov" id="modal" style="display:none;"><div class="mo" id="mi"></div></div>
+<script>
+var CATS=["Biography","Innovations","The Shows","Collaborators","Lyrics & Music"];
+var QS=[
+  [
+    {q:"Lloyd Webber was born in this city in 1948.",a:"London"},
+    {q:"This parent of Lloyd Webber was an organist and composer.",a:"His father, William Lloyd Webber"},
+    {q:"Lloyd Webber was made a Life Peer with this title in 1997.",a:"Baron Lloyd-Webber of Sydmonton"},
+    {q:"The name of Lloyd Webber's own production company.",a:"The Really Useful Group"},
+    {q:"Year Lloyd Webber was knighted.",a:"1992"},
+  ],
+  [
+    {q:"A musical format with no spoken dialogue, where music plays continuously throughout.",a:"Sung-through format (pop opera)"},
+    {q:"Lloyd Webber released this recording in 1970 before it was ever staged.",a:"Jesus Christ Superstar concept album"},
+    {q:"This famous piece of set design in Phantom became a symbol of Lloyd Webber's theatrical spectacle.",a:"The chandelier"},
+    {q:"The term for large-scale, long-running, internationally touring productions Lloyd Webber helped define.",a:"The megamusical"},
+    {q:"Critics often say Lloyd Webber favors this over dramatic substance.",a:"Spectacle"},
+  ],
+  [
+    {q:"This Lloyd Webber musical ran on Broadway from 1988 to 2023.",a:"The Phantom of the Opera"},
+    {q:"Evita is based on the life of this historical figure.",a:"Eva Peron, First Lady of Argentina"},
+    {q:"This early Lloyd Webber show is based on a biblical story and often performed in schools.",a:"Joseph and the Amazing Technicolor Dreamcoat"},
+    {q:"This 1993 Lloyd Webber show is based on a classic Hollywood film about a faded silent-film star.",a:"Sunset Boulevard"},
+    {q:"Lloyd Webber's sequel to Phantom, set 10 years later in Coney Island.",a:"Love Never Dies"},
+  ],
+  [
+    {q:"Lyricist on Joseph, Jesus Christ Superstar, and Evita.",a:"Tim Rice"},
+    {q:"Director of both Evita and Phantom of the Opera.",a:"Harold Prince (Hal Prince)"},
+    {q:"This poet's cat verses formed the basis for Cats.",a:"T.S. Eliot"},
+    {q:"She originated the role of Christine in the 1986 London premiere, and was Lloyd Webber's wife at the time.",a:"Sarah Brightman"},
+    {q:"How Lloyd Webber found cast members for revival productions like Maria! and Any Dream Will Do.",a:"Television talent competitions"},
+  ],
+  [
+    {q:"A short recurring musical theme tied to a specific character or idea, used heavily in Phantom.",a:"Leitmotif"},
+    {q:"The most famous ballad from Evita.",a:"Don't Cry for Me Argentina"},
+    {q:"Lloyd Webber won an Oscar for this song from the 1996 Evita film.",a:"You Must Love Me"},
+    {q:"The musical style blending operatic vocals with rock and pop that defines much of Lloyd Webber's work.",a:"Pop opera / rock opera"},
+    {q:"This dramatic technique, where a melody introduced early returns in a transformed way, is central to Lloyd Webber's structure.",a:"Reprise / recapitulation"},
+  ],
+];
+var PTS=[100,200,300,400,500];
+var teams=[{name:"Team 1",score:0},{name:"Team 2",score:0},{name:"Team 3",score:0}];
+var used=Array.from({length:5},function(){return Array(5).fill(false);});
+var activeTeam=0, curCell=null;
+function renderSB(){
+  var sb=document.getElementById('sb');sb.innerHTML='';
+  teams.forEach(function(t,i){
+    var d=document.createElement('div');d.className='tc'+(i===activeTeam?' act':'');
+    d.onclick=function(){activeTeam=i;renderSB();document.getElementById('msg').textContent='';};
+    d.innerHTML='<input value="'+t.name+'" onclick="event.stopPropagation()" oninput="teams['+i+'].name=this.value;renderSB()"/><div class="sc">'+t.score+'</div>';
+    sb.appendChild(d);
+  });
+}
+function renderBoard(){
+  var b=document.getElementById('board');b.innerHTML='';
+  CATS.forEach(function(c){var h=document.createElement('div');h.className='ch';h.textContent=c;b.appendChild(h);});
+  for(var row=0;row<5;row++){for(var col=0;col<5;col++){
+    var cell=document.createElement('button');
+    cell.className='cell'+(used[col][row]?' used':'');
+    cell.textContent=used[col][row]?'✓':'$'+PTS[row];
+    if(!used[col][row]){(function(c,r){cell.onclick=function(){openQ(c,r);};})(col,row);}
+    b.appendChild(cell);
+  }}
+}
+function openQ(col,row){
+  curCell={col:col,row:row};
+  var q=QS[col][row];var pts=PTS[row];
+  document.getElementById('mi').innerHTML=
+    '<div class="cl">'+CATS[col]+'</div>'+
+    '<span class="pb">$'+pts+'</span>'+
+    '<div class="qq">'+q.q+'</div>'+
+    '<div class="ab" id="abox"><div class="al">Answer</div><div class="at">'+q.a+'</div></div>'+
+    '<div class="mbs">'+
+    '<button class="rb" onclick="document.getElementById(\'abox\').style.display=\'block\'">Reveal answer</button>'+
+    '<button class="cb" onclick="award('+pts+')">+$'+pts+' correct</button>'+
+    '<button class="wb" onclick="award(-'+pts+')">&#8722;$'+pts+' wrong</button>'+
+    '<button onclick="closeM()">Skip / close</button>'+
+    '</div>';
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('msg').textContent='';
+}
+function award(pts){
+  teams[activeTeam].score+=pts;
+  var s=pts>0?'+':'';
+  document.getElementById('msg').textContent=s+'$'+Math.abs(pts)+' to '+teams[activeTeam].name+' (now $'+teams[activeTeam].score+')';
+  markUsed();closeM();renderSB();
+}
+function markUsed(){if(curCell){used[curCell.col][curCell.row]=true;renderBoard();}}
+function closeM(){markUsed();document.getElementById('modal').style.display='none';curCell=null;}
+function resetJ(){
+  used=Array.from({length:5},function(){return Array(5).fill(false);});
+  teams.forEach(function(t){t.score=0;});activeTeam=0;
+  document.getElementById('msg').textContent='';renderSB();renderBoard();
+  document.getElementById('modal').style.display='none';
+}
+function addTeam(){if(teams.length>=6)return;teams.push({name:'Team '+(teams.length+1),score:0});renderSB();}
+renderSB();renderBoard();
+</script>
+</body>
+</html>
